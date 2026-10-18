@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>배서준 · 인간형 모델 연구</title><style>body{margin:0;background:#111722;color:#edf2fa;font:14px system-ui}canvas{display:block}header{position:fixed;top:20px;left:22px;pointer-events:none}h1{font-size:20px;margin:0 0 8px}p{color:#acb9cc;max-width:440px;line-height:1.6}nav{position:fixed;bottom:24px;left:0;right:0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}button{background:#243044;color:white;border:1px solid #53627a;padding:12px 18px;border-radius:8px;cursor:pointer}button:focus-visible{outline:3px solid #fcb683}#status{position:fixed;right:18px;top:20px;color:#bbc8dc}</style><script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script></head><body><header><h1>배서준 / HUMAN BASE 01</h1><p>이미지 없는 관절형 기본 모델 · 외형 미확정<br>드래그: 회전 · 휠/핀치: 확대 · 우클릭: 이동</p></header><div id="status" role="status">3D 모듈 로딩 중…</div><nav aria-label="모델 동작"><button data-pose="idle">대기</button><button data-pose="guard">가드</button><button data-pose="punch">펀치</button><button id="rotate">자동 회전 켜기</button><button id="reset">시점 초기화</button></nav><script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const status=document.querySelector('#status');
+try{
+const scene=new THREE.Scene();scene.background=new THREE.Color('#111722');scene.fog=new THREE.Fog('#111722',9,22);
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,60);
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.append(renderer.domElement);
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=2.5;controls.maxDistance=10;controls.maxPolarAngle=Math.PI*.49;
+function reset(){camera.position.set(3,2.1,4.7);controls.target.set(0,1.05,0);controls.update();}reset();
+scene.add(new THREE.HemisphereLight(0xc9e3ff,0x35313b,2));
+const key=new THREE.DirectionalLight(0xffe5cf,3.2);key.position.set(3,6,4);key.castShadow=true;key.shadow.mapSize.set(2048,2048);scene.add(key);
+const rim=new THREE.DirectionalLight(0x83adff,2);rim.position.set(-3,3,-3);scene.add(rim);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(60,60),new THREE.MeshStandardMaterial({color:0x182231,roughness:.9}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+const grid=new THREE.GridHelper(16,32,0x40516a,0x253449);grid.position.y=.002;scene.add(grid);
+const clay=new THREE.MeshStandardMaterial({color:0xb9bec7,roughness:.65,metalness:.08});
+const dark=new THREE.MeshStandardMaterial({color:0x546174,roughness:.8});
+const face=new THREE.MeshStandardMaterial({color:0x323d4d,roughness:.8});
+const root=new THREE.Group();scene.add(root);
+function ellipsoid(parent,x,y,z,sx,sy,sz,mat=clay){const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),mat);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
+function pivot(parent,x,y,z){const g=new THREE.Group();g.position.set(x,y,z);parent.add(g);return g;}
+function segment(parent,length,top,bottom){const mesh=new THREE.Mesh(new THREE.CylinderGeometry(top,bottom,length,20),clay);mesh.position.y=-length/2;mesh.castShadow=true;parent.add(mesh);return mesh;}
+const hips=pivot(root,0,1.02,0);ellipsoid(hips,0,0,0,.235,.17,.145);
+const torso=pivot(hips,0,.12,0);ellipsoid(torso,0,.22,0,.29,.31,.16);ellipsoid(torso,0,.06,0,.20,.20,.135);
+const neck=pivot(torso,0,.50,0);ellipsoid(neck,0,.035,0,.075,.10,.075);
+const head=pivot(neck,0,.18,0);ellipsoid(head,0,.025,0,.135,.18,.125);ellipsoid(head,0,-.065,.015,.112,.105,.10);
+ellipsoid(head,-.048,.04,.113,.019,.012,.008,face);ellipsoid(head,.048,.04,.113,.019,.012,.008,face);ellipsoid(head,0,-.002,.126,.022,.035,.027);ellipsoid(head,0,-.07,.106,.043,.006,.006,dark);
+ellipsoid(head,-.135,.01,0,.025,.045,.023);ellipsoid(head,.135,.01,0,.025,.045,.023);
+function arm(side){const shoulder=pivot(torso,side*.31,.37,0);ellipsoid(shoulder,0,0,0,.105,.11,.105);segment(shoulder,.29,.085,.065);const elbow=pivot(shoulder,0,-.29,0);ellipsoid(elbow,0,0,0,.065,.065,.065,dark);segment(elbow,.26,.069,.045);const hand=pivot(elbow,0,-.30,0);ellipsoid(hand,0,0,.012,.055,.085,.045);ellipsoid(hand,-side*.05,.015,.015,.025,.045,.025);return{shoulder,elbow,hand};}
+function leg(side){const hip=pivot(hips,side*.13,-.08,0);ellipsoid(hip,0,0,0,.115,.12,.115);segment(hip,.43,.105,.074);const knee=pivot(hip,0,-.43,0);ellipsoid(knee,0,0,0,.075,.075,.075,dark);segment(knee,.40,.077,.047);const ankle=pivot(knee,0,-.40,0);ellipsoid(ankle,0,-.025,.065,.072,.06,.14);return{hip,knee};}
+const left=arm(-1),right=arm(1),ll=leg(-1),rl=leg(1);
+const joints=[torso,head,left.shoulder,left.elbow,right.shoulder,right.elbow,ll.hip,ll.knee,rl.hip,rl.knee];
+let mode='idle',start=performance.now(),previous=start;const motion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function choose(next){mode=next;start=performance.now();}document.querySelectorAll('[data-pose]').forEach(b=>b.onclick=()=>choose(b.dataset.pose));
+document.querySelector('#reset').onclick=reset;document.querySelector('#rotate').onclick=e=>{controls.autoRotate=!controls.autoRotate;e.target.textContent=controls.autoRotate?'자동 회전 끄기':'자동 회전 켜기';};
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+const clamp=THREE.MathUtils.clamp;
+function animate(now){const dt=Math.min((now-previous)/1000,.05);previous=now;const t=(now-start)/1000;const target=joints.map(()=>[0,0,0]);target[2][2]=-.13;target[4][2]=.13;target[6][2]=-.055;target[8][2]=.055;target[3][0]=-.12;target[5][0]=-.12;
+if(mode==='guard'||mode==='punch'){target[0][1]=-.20;target[2]=[-.75,0,-.28];target[4]=[-.80,0,.28];target[3][0]=-1.65;target[5][0]=-1.65;target[6][0]=-.09;target[7][0]=.14;target[8][0]=.06;target[9][0]=.08;}
+if(mode==='punch'){const p=clamp((t-.30)/.20,0,1),back=clamp((t-.75)/.40,0,1),extension=Math.sin(p*Math.PI/2)*(1-back);target[4][0]=-.8-extension*.72;target[5][0]=-1.65+extension*1.58;target[0][1]=-.20+extension*.55;if(t>1.25)choose('guard');}
+const blend=1-Math.exp(-dt*14);joints.forEach((j,i)=>{j.rotation.x=THREE.MathUtils.lerp(j.rotation.x,target[i][0],blend);j.rotation.y=THREE.MathUtils.lerp(j.rotation.y,target[i][1],blend);j.rotation.z=THREE.MathUtils.lerp(j.rotation.z,target[i][2],blend);});
+hips.position.y=1.02+(motion?0:Math.sin(now*.002)*.008);controls.update();renderer.render(scene,camera);}
+status.textContent='기본 인간형 · 이미지/텍스처 없음';renderer.setAnimationLoop(animate);
+}catch(error){console.error(error);status.textContent='3D 초기화 실패: WebGL 지원과 인터넷 연결을 확인하세요.';}
+</script></body></html>
