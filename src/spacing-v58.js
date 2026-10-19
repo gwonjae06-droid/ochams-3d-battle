@@ -1,9 +1,23 @@
-const url=new URL('./framing-v55.js?source=5.8',import.meta.url),response=await fetch(url,{cache:'no-store'});
+const url=new URL('./framing-v55.js?source=5.9',import.meta.url),response=await fetch(url,{cache:'no-store'});
 if(!response.ok)throw Error('카메라 소스 로딩 실패: '+response.status);
 let source=await response.text();
 const needle='d=Math.max(h/(2*t*.73),w/(2*t*a*.78))';
 if(source.split(needle).length!==2)throw Error('윤서윤 거리 패치 위치가 변경되었습니다.');
-source=source.replace(needle,needle+'+(r.boss===2?6:0)').replace(/(from\s+)'(\.\/[^']+)'/g,(_,p,x)=>p+"'"+new URL(x,url).href+"'");
+source=source.replace(needle,needle+'+(r.boss===2?6:0)');
+const start=source.indexOf('function motionShot('),end=source.indexOf('\nfx.slot=slot;',start);
+if(start<0||end<0||source.indexOf('function motionShot(',start+1)>=0)throw Error('공격 카메라 연결 위치가 변경되었습니다.');
+const motion=`let cameraRole='';
+function actionFrame(parts,focus,normal,fov,anchor,axis,role,high){parts=parts.filter(b=>!b.isEmpty());if(!parts.length)return;if(cameraRole!==role){ready=false;cameraRole=role;}normal=normal.clone().normalize();const points=parts.flatMap(b=>corners(b));
+function required(n,angle){const rx=up.clone().cross(n).normalize(),uy=n.clone().cross(rx).normalize(),tan=Math.tan(angle*Math.PI/360),aspect=Math.max(.35,cam.aspect);let d=2.8;for(const p of points){const v=p.clone().sub(focus),z=v.dot(n);d=Math.max(d,z+Math.abs(v.dot(rx))/(tan*aspect*.78),z+Math.abs(v.dot(uy))/(tan*.78));}if(anchor&&axis){const back=-n.dot(axis);if(back>.05)d=Math.max(d,focus.clone().sub(anchor).dot(axis)/back+2.2);}return d+.35;}
+move(focus.clone().addScaledVector(normal,required(normal,fov)),focus,fov);let direction=eye.clone().sub(focus);if(direction.lengthSq()<.01)direction.copy(normal);direction.normalize();if(role==='boss-rear'||direction.dot(axis)>.05)direction.copy(normal);if(!high){direction.y=clamp(direction.y,-.14,.14);direction.normalize();}const d=Math.max(eye.distanceTo(focus),required(direction,lens));eye.copy(focus).addScaledVector(direction,d);aim.copy(focus);A.cameraAt(eye,aim,lens);}
+function motionShot(r,active){const o=overview();if(idle()||mode==='quiz'){cameraRole='';const offset=o.p.clone().sub(o.l),s=new T.Spherical().setFromVector3(offset);s.theta+=orbit.yaw;s.phi=clamp(s.phi-orbit.pitch,.25,Math.PI/2+.25);s.radius*=orbit.zoom;move(o.l.clone().add(V().setFromSpherical(s)),o.l,o.fov);return;}
+const bb=bodyBox(bossRoot(r)),heroBoxes=[];if(mode==='boss'){let ids=r.targets();if(!ids.length)ids=r.party.map((a,i)=>i);for(const i of ids)if(r.party[i].hp>0)heroBoxes.push(bodyBox(actors[i].hero));}else if(mode==='transition'){for(let i=0;i<actors.length;i++)if(r.party[i].hp>0)heroBoxes.push(bodyBox(actors[i].hero));}else if(active>=0)heroBoxes.push(bodyBox(actors[active].hero));
+const hb=new T.Box3();heroBoxes.forEach(b=>hb.union(b));if(hb.isEmpty()&&bb.isEmpty()){move(o.p,o.l,o.fov);return;}const hc=(hb.isEmpty()?bb:hb).getCenter(V()),bc=(bb.isEmpty()?hb:bb).getCenter(V()),axis=bc.clone().sub(hc).setY(0);if(axis.lengthSq()<.01)axis.copy(forward);axis.normalize();const side=axis.clone().cross(up).normalize();if(side.dot(right)<0)side.multiplyScalar(-1);
+const high=mode==='ult'||mode==='boss'&&['ult','tide','bloom'].includes(r.intent),parts=[...heroBoxes],damaging=['attack','followup'].includes(mode),bossTurn=mode==='boss';let focus=hc.clone(),normal=axis.clone().multiplyScalar(-.6).addScaledVector(side,.8).add(V(0,.1,0)),fov=43,role='self';
+if(high){parts.push(bb);focus.lerp(bc,.45);normal=axis.clone().multiplyScalar(-.65).addScaledVector(side,.4).add(V(0,.85,0));fov=55;role='ultimate';}else if(bossTurn||mode==='transition'){parts.push(bb);focus.lerp(bc,.3);normal=axis.clone().multiplyScalar(-1).addScaledVector(side,.12).add(V(0,.06,0));fov=mode==='transition'?52:48;role='boss-rear';}else if(damaging){if(!bb.isEmpty()){const p=bb.clampPoint(hc,V()),size=bb.getSize(V()),radius=Math.max(.6,Math.min(1.6,Math.min(size.x,size.z)*.35));p.y=clamp(hc.y,bb.min.y+Math.min(2,size.y*.18),bb.max.y);const region=new T.Box3(p.clone().add(V(-radius,-radius,-radius)),p.clone().add(V(radius,radius,radius))).intersect(bb);parts.push(region);focus.lerp(p,.22);}normal=axis.clone().multiplyScalar(-.92).addScaledVector(side,.38).add(V(0,.1,0));fov=40;role='ally-track';}
+if(active===2&&bomb.visible)parts.push(bodyBox(bomb));if(bossTurn&&r.boss===2)for(const node of sc.children)if(node.visible&&(node.userData.splitSide||high&&node.isGroup&&node.children.some(m=>m.geometry?.attributes?.position?.count===1995)))parts.push(bodyBox(node));actionFrame(parts,focus,normal,fov,hc,axis,role,high);}
+`;
+source=(source.slice(0,start)+motion+source.slice(end)).replace(/(from\s+)'(\.\/[^']+)'/g,(_,p,x)=>p+"'"+new URL(x,url).href+"'");
 const blob=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
 let factory;try{factory=(await import(blob)).createSpectacle;}finally{URL.revokeObjectURL(blob);}
 export function createSpectacle(...args){return factory(...args);}
