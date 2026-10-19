@@ -1,0 +1,7 @@
+export class DamageLedger{
+constructor(names){this.rows=names.map(name=>({name,normal:0,ult:0,extra:0,hits:0,actions:0}));this.dot=0;}
+action(i){if(this.rows[i])this.rows[i].actions++;}
+hit(i,action,n){n=Number(n);if(!this.rows[i]||!Number.isFinite(n)||n<=0)return;const k=action==='followup'?'extra':action==='ult'?'ult':'normal';this.rows[i][k]+=n;this.rows[i].hits++;}
+burn(n){n=Number(n);if(Number.isFinite(n)&&n>0)this.dot+=n;}
+snapshot(){const direct=this.rows.reduce((s,r)=>s+r.normal+r.ult+r.extra,0);return {direct,dot:this.dot,total:direct+this.dot,rows:this.rows.map(r=>({...r,total:r.normal+r.ult+r.extra,share:direct?(r.normal+r.ult+r.extra)/direct*100:0}))};}}
+export function labConfig(o={}){const int=(x,a,b,d)=>Number.isFinite(Number(x))?Math.max(a,Math.min(b,Math.trunc(Number(x)))):d;const c={kind:o.kind==='boss'?'boss':'player',boss:int(o.boss,1,3,1),phase:int(o.phase,1,2,1),actor:int(o.actor,0,2,0),rank:int(o.rank,0,6,0),iq:int(o.iq,0,4,0),nuke:!!o.nuke,action:['attack','skill','ult','followup'].includes(o.action)?o.action:'attack',intent:o.intent||'slash',roll:o.roll||'random'};if(c.kind==='player'&&c.action==='followup'&&c.actor!==2)throw Error('추가공격은 박성원을 선택해 주세요.');const allowed={1:['slash','spin','smash','tornado','ult','guard'],2:['spit','lash','pounce','spores','leech','tide','guard'],3:['petal','thorn','scent','smite','bloom','guard']};if(!allowed[c.boss].includes(c.intent))c.intent=allowed[c.boss][0];return c;}
