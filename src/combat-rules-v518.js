@@ -10,10 +10,10 @@ skill(p){const out=super.skill(p);this.party[p.actor].def=Math.min(3,this.party[
 team(p){if(p.actor===1&&p.effect==='atk')return 'SP +'+this.gainSP(3)+' ('+this.sp+'/'+this.spMax+')';return super.team(p);}
 forecast(){let o=0;return this.clock.preview(this.speeds(),this.alive()).map(e=>e.i===3?{b:1,o:o++,av:e.av}:{i:e.i,av:e.av});}
 route(next){if(!['idle','boss'].includes(next))return next;if(this.bhp<=0)return 'win';if(this.party.every(a=>a.hp<=0))return 'lose';if(this.phase===1&&this.bhp<=this.max/2)return 'transition';this.clock.sync(this.speeds(),this.alive());if(!this.alive()[this.clock.current])this.clock.select();const i=this.clock.current;if(i===3)return 'boss';this.active=i;return 'idle';}
-resetToughness(){this.toughness=100;this.toughnessBroken=false;}
+resetToughness(){if(!this.toughnessBroken||this.toughness>0)return;this.toughness=this.toughnessMax;this.toughnessBroken=false;}
 breakToughness(){if(this.toughnessBroken||this.bhp<=0)return;this.toughness=0;this.toughnessBroken=true;this.breakSerial++;this.clock.sync(this.speeds(),this.alive());this.clock.delay(3,.25,this.bossActing&&this.clock.current===3);}
-hitBoss(base,p){const scale=p.actor===1&&p.action==='attack'?p.fireScale??1:1,out=super.hitBoss(base*scale*(this.toughnessBroken?1.25:1),p);if(out.damage>0&&this.bhp>0&&!(this.phase===1&&this.bhp<=this.max/2)&&!this.toughnessBroken&&!this.toughPlans.has(p)&&['attack','ult','followup'].includes(p.action)){this.toughPlans.add(p);const n=p.action==='ult'?40:p.action==='followup'?10:p.actor===1&&p.fireCost?[0,20,35,50][p.fireCost]:p.heavy?30:20;this.toughness=Math.max(0,this.toughness-n);if(!this.toughness)this.breakToughness();}return out;}
+hitBoss(base,p){const scale=p.actor===1&&p.action==='attack'?p.fireScale??1:1,out=super.hitBoss(base*scale*(this.toughnessBroken?1.25:.9),p);if(out.damage>0&&this.bhp>0&&!(this.phase===1&&this.bhp<=this.max/2)&&!this.toughnessBroken&&!this.toughPlans.has(p)&&['attack','ult','followup'].includes(p.action)){this.toughPlans.add(p);const n=p.action==='ult'?40:p.action==='followup'?10:p.actor===1&&p.fireCost?[0,20,35,50][p.fireCost]:p.heavy?30:20;this.toughness=Math.max(0,this.toughness-n);if(!this.toughness)this.breakToughness();}return out;}
 onPresentationStart(mode){this.presentation=mode;if(mode==='boss'){this.resetToughness();this.bossActing=true;if(this.lab){this.clock.current=3;this.clock.remaining[3]=0;}}}
 endBoss(){this.bossActing=false;return super.endBoss();}
-enterPhase2(){super.enterPhase2();this.resetToughness();}
+enterPhase2(){super.enterPhase2();}
 }
