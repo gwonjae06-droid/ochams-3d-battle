@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'./tests/browser',testMatch:'**/*.pw.mjs',workers:1,timeout:45000,use:{baseURL:'http://127.0.0.1:4173',headless:true,trace:'retain-on-failure',screenshot:'only-on-failure',launchOptions:{args:['--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']}},webServer:{command:'python3 -m http.server 4173',url:'http://127.0.0.1:4173',reuseExistingServer:!process.env.CI}});
