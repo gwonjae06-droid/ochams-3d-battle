@@ -1,7 +1,7 @@
 import {installMenu} from './story-menu.js?v=4.9';
 const BASE=[
-['./party-rules.js?v=4.5','./park-rules.js?v=5.1'],
-["import * as T from 'three';","import * as T from 'three';\nimport {createTheme} from './stage-theme.js?v=4.8';\nimport {createQuiz,punish} from './philosophy-quiz.js?v=4.9';\nimport {createPark} from './park-combat.js?v=5.1';"],
+['./party-rules.js?v=4.5','./park-rules-v53.js?v=5.3'],
+["import * as T from 'three';","import * as T from 'three';\nimport {createTheme} from './stage-theme.js?v=4.8';\nimport {createQuiz,punish} from './philosophy-quiz.js?v=4.9';\nimport {createPark} from './park-enhance.js?v=5.3';"],
 ['const SL=createSlime(A,V,EX),STA=createStatue(A,V,EX);',"const SL=createSlime(A,V,EX),STA=createStatue(A,V,EX);const TH=createTheme(A,V,EX,OX),QZ=createQuiz();const PK=createPark(A,V,EX,OX,{state:()=>r,hit:hHit,ui,notice:display,sound:(k,b)=>M.sfx(k,b),impact:(f,s)=>{flash=Math.max(flash,f);shake=Math.max(shake,s);}});P.park=PK.actor;const posBefore=P.pos;P.pos=i=>i===2?PK.actor.hero.position.clone():posBefore(i);"],
 ['r=new PartyRules(id,id===3?campaign.unlocked3:campaign.unlocked);','r=new PartyRules(id,id===3?campaign.unlocked3:campaign.unlocked);TH.set(id);PK.reset();'],
 ['bHit(tot*.4,true)','bHit(i=>(24+r.party[i].stacks*6)*.4,true)'],['bHit(tot*.15)','bHit(i=>(24+r.party[i].stacks*6)*.15)'],['events.bs=r.stacks','events.bs=r.stackMax'],['sm.stacks=r.stacks','sm.stacks=r.stackMax'],
@@ -16,11 +16,10 @@ const BASE=[
 ["$('result').textContent='파티 전멸';","$('result').textContent='파티 전멸';window.dispatchEvent(new CustomEvent('ochams-lose',{detail:{boss:r.boss}}));"],
 ['function actionName(action,idx=r.active){const a=r.party[idx];',"function actionName(action,idx=r.active){if(r.party[idx].id==='park')return PK.name(action);const a=r.party[idx];"],
 ['function progress(next){',"function progress(next){const before=plan;if(PK.intercept(next,p=>{plan=p;start('followup');},n=>{plan=before;progress(n);})){return;}"],
-['function finishHero(){','function finishHero(){PK.arm();'],['function finishUlt(){','function finishUlt(){PK.arm();'],['function finishBoss(){','function finishBoss(){PK.arm();'],
-['P.resetFrame();','P.resetFrame();PK.rest();'],
+['P.resetFrame();','P.resetFrame();PK.rest();PK.idle(mode,plan,performance.now(),P.choi);'],
 ['for(const o of [A,P.choi])','for(const o of [A,P.choi,P.park])'],
 ['const actor=i===0?A:P.choi;','const actor=[A,P.choi,P.park][i];'],
-["for(let i=0;i<2;i++)$('ult'+i).onclick=()=>queueUlt(i);","for(let i=0;i<r.party.length;i++)$('ult'+i).onclick=()=>{if(i!==2||!r.party[2].developed)queueUlt(i);};"],
+["for(let i=0;i<2;i++)$('ult'+i).onclick=()=>queueUlt(i);","for(let i=0;i<r.party.length;i++)$('ult'+i).onclick=()=>queueUlt(i);"],
 ["if(['attack','skill','ult'].includes(fm)&&plan.actor===1)","if(mode===fm&&['attack','skill','ult'].includes(fm)&&plan.actor===1)"],
 ["if(fm==='transition'){", "if(mode===fm&&['attack','skill','ult'].includes(fm)&&plan.actor===2){if(PK.tick(fm,t,plan))finishHero();}\nif(fm==='followup'&&mode===fm){if(PK.tick('followup',t,plan))PK.complete();}\nif(fm==='transition'){"],
 ['배서준 → 최규원 → 보스 · 현재 ','속도 기반 행동 순서 · 현재 ']
