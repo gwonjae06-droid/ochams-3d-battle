@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const fixture=`class Previous{constructor(){this.active=0;this.received=new Set();this.intent='ult';this.party=['bae','choi','park'].map(id=>({id,en:0,hp:100}));}start(action,i){const a=this.party[i];if(action==='ult'){if(a.en<100)throw Error('legacy gate');a.en=0;}const p={actor:i,action,fireCost:this.fireChoice||0};this.lastPlan=p;return p;}skill(p){this.party[p.actor].en=Math.min(100,this.party[p.actor].en+35);}hitBoss(n,p){if(p.action==='attack'&&!p.enGiven){p.enGiven=true;this.party[p.actor].en=Math.min(100,this.party[p.actor].en+25);}return {damage:n};}team(p){if(p.effect==='charge')this.party.forEach((a,i)=>a.en=Math.min(100,a.en+(i===p.actor?20:50)));}endBoss(){for(const i of this.received)this.party[i].en=Math.min(100,this.party[i].en+25);this.received.clear();return {next:'idle'};}}`;
+const code=readFileSync(new URL('../src/energy-rules-v519.js',import.meta.url),'utf8').split('\n').filter(s=>!s.startsWith('import ')&&!s.startsWith('export {')).join('\n');
+const {PartyRules}=await import('data:text/javascript;base64,'+Buffer.from(fixture+'\n'+code).toString('base64'));
+test('energy caps are 120 100 90',()=>{const r=new PartyRules();assert.deepEqual(r.party.map(a=>a.energyMax),[120,100,90]);});
+test('Bae cannot ult at 100; Park can ult at 90',()=>{const r=new PartyRules();r.party[0].en=100;assert.throws(()=>r.start('ult',0));assert.equal(r.party[0].en,100);r.party[0].en=120;r.start('ult',0);assert.equal(r.party[0].en,0);r.party[2].en=90;r.start('ult',2);assert.equal(r.party[2].en,0);});
+test('skills cap at per-character maximum',()=>{const r=new PartyRules();r.party[0].en=110;r.skill({actor:0});assert.equal(r.party[0].en,120);r.party[2].en=85;r.skill({actor:2});assert.equal(r.party[2].en,90);});
+test('multihit attack adds energy once',()=>{const r=new PartyRules();r.party[0].en=100;const p={actor:0,action:'attack'};r.hitBoss(10,p);r.hitBoss(10,p);assert.equal(r.party[0].en,120);});
+test('roulette charge respects both high and low caps',()=>{const r=new PartyRules();r.party[0].en=100;r.party[2].en=80;r.team({actor:1,effect:'charge'});assert.deepEqual(r.party.map(a=>a.en),[120,20,90]);});
+test('received energy uses action-start intent and correct caps',()=>{const r=new PartyRules();r.party[0].en=110;r.party[2].en=85;r.received=new Set([0,2]);r.endBoss();assert.equal(r.party[0].en,120);assert.equal(r.party[2].en,90);});
+test('free flamethrower removes duplicate 1SP option',()=>{const r=new PartyRules();r.fireChoice=1;const p=r.start('attack',1);assert.equal(p.fireCost,0);assert.equal(p.fireScale,.75);});
