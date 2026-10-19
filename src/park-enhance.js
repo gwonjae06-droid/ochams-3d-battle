@@ -1,5 +1,5 @@
 import {createPark as original} from './park-combat.js?v=5.1';
-import {createSpectacle} from './spectacle-v54.js?v=5.4';
+import {createSpectacle} from './framing-v55.js?v=5.5';
 export function createPark(A,V,EX,OX,H){
 const before=new Set(A.scene.children),pk=original(A,V,EX,OX,H),rest=pk.rest,reset=pk.reset,tick=pk.tick,actor=pk.actor,bomb=A.scene.children.find(o=>!before.has(o)&&o.isGroup&&o!==actor.hero),label=[...document.body.children].find(e=>e.textContent==='추가공격 · 원자력 점프');
 if(!bomb||!label)throw Error('Park visual rig missing');
