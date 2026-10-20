@@ -1,4 +1,4 @@
-export const VERSION='5.29';
+export const VERSION='5.30';
 export function stampText(text,version=VERSION){const re=/v\d+(?:\.\d+)+/;return re.test(text)?text.replace(re,'v'+version):text+' v'+version;}
 export function stampVersion(doc=globalThis.document,version=VERSION){if(!doc)return false;doc.documentElement?.setAttribute?.('data-build',version);
 const title=stampText(doc.title||'오챔스',version);if(doc.title!==title)doc.title=title;

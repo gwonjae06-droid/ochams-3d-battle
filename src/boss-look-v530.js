@@ -1,0 +1,24 @@
+export const PETALS=28,DUST=36;
+const COLORS=[0xffb842,0xf47a22,0xf6f1d8,0xffffff,0xbdd3e2,0xd5dfaf],fract=x=>x-Math.floor(x),noop=()=>{};
+export const RIM_VERT_OFFSET='uniform float uOffset;varying vec3 vN;varying vec3 vV;void main(){vec3 p=position+normal*uOffset;vec4 mv=modelViewMatrix*vec4(p,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}';
+export const RIM_FRAG='uniform vec3 uColor;uniform float uPower;uniform float uAlpha;varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.0-clamp(dot(normalize(vN),normalize(vV)),0.0,1.0),uPower);gl_FragColor=vec4(uColor*1.8,f*uAlpha);}';
+export function petalState(i,t){const p=fract(t*(.00012+(i%5)*.00002)+i*.6180339),a=i*2.399,sway=Math.sin(t*.0009+i*1.3)*.5,fade=p<.06?p/.06:p>.94?(1-p)/.06:1,s=.2+(i%4)*.03;return {x:Math.cos(a)*1.7+sway,y:.9+9*(1-p),z:1.7+Math.sin(a)*1.1+Math.cos(t*.0007+i)*.3,rot:t*.002+i,sx:s*fade,sy:s*.15*fade,sz:s*.65*fade};}
+export function dustState(i,t){const p=fract(t*(.00007+(i%7)*.00001)+i*.3819),a=i*2.399,fade=p<.08?p/.08:p>.92?(1-p)/.08:1,s=.05+(i%3)*.025;return {x:Math.cos(a)*(1.2+(i%5)*.4),y:1+10.5*(1-p),z:Math.sin(a)*1.4+.4*Math.sin(t*.0006+i),s:s*fade};}
+export function findStatue(scene){for(const g of scene?.children||[]){if(!g.isGroup)continue;const rig=g.children?.[0];if(!rig?.isGroup)continue;if(rig.children.some(m=>m.isMesh&&m.geometry?.type==='CylinderGeometry'&&Math.abs((m.geometry.parameters?.radiusTop??0)-3.1)<.01))return {g,rig};}return null;}
+export function findTube(scene){return (scene?.children||[]).find(o=>o.isMesh&&o.geometry?.type==='TubeGeometry'&&o.geometry.attributes?.position?.count>1000)||null;}
+export function buildDragonLook(T,A){const rimMat=(off,alpha)=>new T.ShaderMaterial({uniforms:{uColor:{value:new T.Color(0xa9d6ff)},uPower:{value:2.2},uAlpha:{value:alpha},uOffset:{value:off}},vertexShader:RIM_VERT_OFFSET,fragmentShader:RIM_FRAG,transparent:true,blending:T.AdditiveBlending,depthWrite:false});
+const head=A.dh.children.find(m=>m.isMesh&&m.geometry?.type==='SphereGeometry');let headRim=null;if(head){headRim=new T.Mesh(head.geometry,rimMat(0,.7));headRim.scale.setScalar(1.03);headRim.frustumCulled=false;headRim.raycast=noop;head.add(headRim);}
+const tube=findTube(A.scene);let tubeRim=null;if(tube){tubeRim=new T.Mesh(tube.geometry,rimMat(.07,.6));tubeRim.frustumCulled=false;tubeRim.raycast=noop;A.scene.add(tubeRim);}
+const shine=new T.Mesh(A.blade.geometry,new T.MeshBasicMaterial({color:0xdff0ff,transparent:true,opacity:.2,blending:T.AdditiveBlending,depthWrite:false}));shine.scale.set(1.35,1.12,1);shine.frustumCulled=false;shine.raycast=noop;A.blade.add(shine);
+function update(t){const on=A.dr.visible!==false;if(tubeRim)tubeRim.visible=on&&tube.visible!==false;shine.material.opacity=.16+.1*Math.sin(t*.006);}
+return {headRim,tubeRim,shine,update};}
+export function buildStatueLook(T,{g,rig}){const petals=new T.InstancedMesh(new T.SphereGeometry(1,8,6),new T.MeshStandardMaterial({roughness:.7,side:T.DoubleSide}),PETALS),dust=new T.InstancedMesh(new T.SphereGeometry(1,5,4),new T.MeshBasicMaterial({color:0xcdbfa6,transparent:true,opacity:.5,depthWrite:false}),DUST),dummy=new T.Object3D(),color=new T.Color();
+for(let i=0;i<PETALS;i++)petals.setColorAt(i,color.setHex(COLORS[i%COLORS.length]));if(petals.instanceColor)petals.instanceColor.needsUpdate=true;
+petals.frustumCulled=false;dust.frustumCulled=false;rig.add(petals);rig.add(dust);
+function update(t){if(!g.visible)return;for(let i=0;i<PETALS;i++){const s=petalState(i,t);dummy.position.set(s.x,s.y,s.z);dummy.rotation.set(s.rot*.6,s.rot,s.rot*.4);dummy.scale.set(Math.max(.001,s.sx),Math.max(.001,s.sy),Math.max(.001,s.sz));dummy.updateMatrix();petals.setMatrixAt(i,dummy.matrix);}petals.instanceMatrix.needsUpdate=true;
+for(let i=0;i<DUST;i++){const s=dustState(i,t),k=Math.max(.001,s.s);dummy.position.set(s.x,s.y,s.z);dummy.rotation.set(0,0,0);dummy.scale.set(k,k,k);dummy.updateMatrix();dust.setMatrixAt(i,dummy.matrix);}dust.instanceMatrix.needsUpdate=true;}
+return {petals,dust,update};}
+const seen=new WeakSet();
+export function installBossLooks(rig,A,T,now=()=>globalThis.performance?.now?.()??Date.now()){const pose=rig?.pose;if(typeof pose!=='function'||!A?.scene||!T)return false;
+const parts=[{name:'턱검룡',find:()=>A.dr&&A.dh&&A.blade?{key:A.dr}:null,build:()=>buildDragonLook(T,A)},{name:'오슬우',find:()=>{const f=findStatue(A.scene);return f&&{key:f.g,...f};},build:f=>buildStatueLook(T,f)}].map(p=>({...p,look:null,calls:0,broken:false}));
+rig.pose=function(...a){const out=pose.apply(this,a);const t=now();for(const p of parts){if(p.broken)continue;try{if(!p.look&&p.calls++%30===0){const f=p.find();if(f&&!seen.has(f.key)){seen.add(f.key);p.look=p.build(f);}}if(p.look)p.look.update(t);}catch(e){p.broken=true;console.warn(p.name+' 외형 강화 건너뜀',e);}}return out;};return true;}
