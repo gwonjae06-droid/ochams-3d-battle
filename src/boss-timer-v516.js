@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {installBossMaterial} from './boss-material-v526.js?v=5.26';
-import {installGraphics} from './graphics-v527.js?v=5.27';
-import {watchVersion} from './version.js?v=5.27';
+import {installGraphics} from './graphics-v527.js?v=5.28';
+import {watchVersion} from './version.js?v=5.28';
 const url=new URL('./boss-cataclysm-v515.js?source=5.16',import.meta.url),res=await fetch(url,{cache:'no-store'});
 if(!res.ok)throw Error('보스 연출 HTTP '+res.status);
 let src=await res.text();

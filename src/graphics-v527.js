@@ -1,6 +1,6 @@
 export const GFX_KEY='ochams-gfx-v1';
 const NO_TONE=0,ACES=4,PCF_SOFT=2,SHIFT={x:5,y:0,z:-1},THIN=new Set(['PlaneGeometry','CircleGeometry','RingGeometry','ShapeGeometry','BufferGeometry','TorusGeometry']);
-export function readPref(storage){try{return storage?.getItem(GFX_KEY)==='on';}catch{return false;}}
+export function readPref(storage){try{return storage?.getItem(GFX_KEY)!=='off';}catch{return true;}}
 export function writePref(storage,on){try{storage?.setItem(GFX_KEY,on?'on':'off');return true;}catch{return false;}}
 export function castInfo(o){const none={cast:false,receive:false};if(!o?.isMesh||o.isInstancedMesh)return none;const m=o.material,g=o.geometry;if(!m||Array.isArray(m)||!g||!(m.isMeshStandardMaterial||m.isMeshPhysicalMaterial)||m.transparent||THIN.has(g.type))return none;const p=g.parameters||{};if(g.type==='SphereGeometry'&&p.radius>30)return none;if(g.type==='CylinderGeometry'&&Math.max(p.radiusTop||0,p.radiusBottom||0)>=30)return {cast:false,receive:true};return {cast:true,receive:true};}
 export function isStageFloor(o){return !!(o?.isMesh&&o.geometry?.type==='CircleGeometry'&&o.geometry.parameters?.radius===80&&o.material?.isMeshBasicMaterial&&o.material.map);}

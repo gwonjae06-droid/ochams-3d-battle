@@ -23,7 +23,7 @@ Respond to the user in Korean. Inspect the current main HEAD before editing.
 ## Versioning
 - The displayed game version is VERSION in src/version.js (major.minor). package.json version is major.minor.patch and must share the same major.minor; tests/version.test.mjs enforces this.
 - Every update that changes game behavior, visuals, sound or story must raise VERSION (for example 5.27 to 5.28) and the package.json version together. Documentation-only or test-only changes may keep the version.
-- New module files and import query strings use the same version (for example graphics-v527.js?v=5.27).
+- A module whose content changes gets its import query string bumped to the new version (for example graphics-v527.js?v=5.28) so browsers do not serve stale cached code. File names keep the version in which they were created.
 - Commit messages use the form type(vX.Y): summary, for example feat(v5.28): improve slime material.
 - Every final report states the version, the commit SHA and which checks were run or not run.
 
