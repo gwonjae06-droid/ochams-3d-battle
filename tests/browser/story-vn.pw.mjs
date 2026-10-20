@@ -4,10 +4,16 @@ async function finish(page){for(let i=0;i<600;i++){if(await atEnd(page))return;c
 test('lines appear one at a time and choices open after the last line',async({page})=>{
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());
-await expect(page.locator('#text')).toContainText('세상은 망했는데');await expect(page.locator('#actions button')).toHaveCount(0);await expect(page.locator('#left .fig')).toHaveCount(1);
-await page.locator('#box').click();await expect(page.locator('#name')).toHaveText('배서준');await expect(page.locator('#left .fig.active')).toHaveCount(1);
-await page.keyboard.press('Enter');await page.keyboard.press('Enter');await expect(page.locator('#actions button')).toHaveCount(1);
+await expect(page.locator('#text')).toContainText('세상은 망했는데');await expect(page.locator('#actions button')).toHaveCount(0);await expect(page.locator('#left .fig')).toHaveCount(1);await expect(page.locator('#ep')).toContainText('대사 1/16');
+await page.locator('#box').click();await expect(page.locator('#name')).toHaveText('배서준');await expect(page.locator('#left .fig.active')).toHaveCount(1);await expect(page.locator('#ep')).toContainText('대사 2/16');
+await page.keyboard.press('Enter');await expect(page.locator('#ep')).toContainText('대사 3/16');
+await page.locator('#skip').click();await expect(page.locator('#actions button')).toHaveCount(1);
 expect(errors).toEqual([]);});
+test('episode 1 explains why the checkpoint fight starts',async({page})=>{
+await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());
+await page.locator('#skip').click();await page.locator('#actions button').first().click();
+await page.locator('#skip').click();await page.locator('[data-action=smash]').click();
+await expect(page.locator('#ep')).toContainText('대사 1/8');await page.locator('#box').click();await expect(page.locator('#text')).toContainText('교전');});
 test('skip opens choices and a double click advances only once',async({page})=>{
 await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());
 await page.locator('#skip').click();await expect(page.locator('#actions button')).toHaveCount(1);
