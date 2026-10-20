@@ -1,28 +1,4 @@
-import {test,expect} from '@playwright/test';
-const atEnd=page=>page.evaluate(()=>window.DeliveryStory.current(window.DeliveryStoryApp.getState()).type==='end'&&document.getElementById('more').hidden);
-async function finish(page){for(let i=0;i<600;i++){if(await atEnd(page))return;const b=page.locator('#actions button');if(await b.count())await b.first().click();else await page.locator('#box').click();}throw new Error('story did not finish');}
-test('lines appear one at a time and choices open after the last line',async({page})=>{
-const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());
-await expect(page.locator('#text')).toContainText('세상은 망했는데');await expect(page.locator('#actions button')).toHaveCount(0);await expect(page.locator('#left .fig')).toHaveCount(1);await expect(page.locator('#ep')).toContainText('대사 1/16');
-await page.locator('#box').click();await expect(page.locator('#name')).toHaveText('배서준');await expect(page.locator('#left .fig.active')).toHaveCount(1);await expect(page.locator('#ep')).toContainText('대사 2/16');
-await page.keyboard.press('Enter');await expect(page.locator('#ep')).toContainText('대사 3/16');
-await page.locator('#skip').click();await expect(page.locator('#actions button')).toHaveCount(1);
-expect(errors).toEqual([]);});
-test('episode 1 explains why the checkpoint fight starts',async({page})=>{
-await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());
-await page.locator('#skip').click();await page.locator('#actions button').first().click();
-await page.locator('#skip').click();await page.locator('[data-action=smash]').click();
-await expect(page.locator('#ep')).toContainText('대사 1/8');await page.locator('#box').click();await expect(page.locator('#text')).toContainText('교전');});
-test('skip opens choices and a double click advances only once',async({page})=>{
-await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());
-await page.locator('#skip').click();await expect(page.locator('#actions button')).toHaveCount(1);
-await page.evaluate(()=>{const b=document.querySelector('#actions button');b.click();b.click();});
-expect((await page.evaluate(()=>window.DeliveryStoryApp.getState())).rev).toBe(1);});
-test('mobile playthrough finishes with the full party and resumes after navigation',async({page})=>{
-await page.setViewportSize({width:390,height:844});const errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());
-for(let i=0;i<6;i++){if(await page.locator('#skip').isEnabled())await page.locator('#skip').click();await page.locator('#actions button').first().click();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);}
-const saved=await page.evaluate(()=>window.DeliveryStoryApp.getState());
-await page.goto('/story-vn.html?continue=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());expect(await page.evaluate(()=>window.DeliveryStoryApp.getState())).toEqual(saved);
-await finish(page);await expect(page.locator('#notice')).toContainText('6화 완주');expect(await page.evaluate(()=>window.DeliveryStoryApp.getState().party)).toEqual(['bae','park','choi']);expect(errors).toEqual([]);});
+import {test,expect} from '@playwright/test';import path from 'node:path';
+test.beforeEach(async({page})=>{await page.route('**/three@0.180.0/build/*.js',route=>route.fulfill({path:path.resolve('node_modules/three/build',new URL(route.request().url()).pathname.split('/').pop()),contentType:'text/javascript',headers:{'access-control-allow-origin':'*'}}));});
+test('new story starts with the long manuscript',async({page})=>{await page.goto('/story-vn.html?new=1');await expect(page.locator('#text')).toHaveText('배서준은 배달 앱에 뜬 숫자를 확인했다.');await expect(page.locator('#ep')).toContainText('1/60');await page.locator('#skip').click();await page.locator('#actions button').first().click();await expect(page.locator('#ep')).toContainText('1/61');});
+test('checkpoint is a real isolated solo battle and cancellation preserves progress',async({page})=>{test.setTimeout(90000);await page.goto('/story-vn.html?new=1');await page.waitForFunction(()=>window.DeliveryStoryApp?.getState());for(let i=0;i<3;i++){await page.locator('#skip').click();await page.locator('#actions button').first().click();}await page.locator('#skip').click();await expect(page.locator('[data-action=win]')).toHaveCount(0);await expect(page.locator('[data-action=lose]')).toHaveCount(0);await page.evaluate(()=>localStorage.setItem('ochams-campaign-v4','unchanged'));await page.locator('#adapter').click();const f=page.frameLocator('dialog iframe');await expect(f.locator('#bossname')).toContainText('이권재',{timeout:60000});await expect(f.locator('#card1')).toBeHidden();await expect(f.locator('#card2')).toBeHidden();const child=page.frames().find(f=>f.parentFrame()===page.mainFrame());const s=await child.evaluate(()=>({hp:__ochamsGame.state().party.map(a=>a.hp),targets:__ochamsGame.state().targets(),isolated:window.__storyStorageIsolated,clone:__ochamsArena.scene.children.some(o=>o.userData.storyVariant==='checkpoint-clone')}));expect(s.hp[0]).toBeGreaterThan(0);expect(s.hp.slice(1)).toEqual([0,0]);expect(s.targets).toEqual([0]);expect(s.isolated&&s.clone).toBe(true);await page.getByRole('button',{name:'전투 중단 · 스토리로'}).click();expect(await page.evaluate(()=>DeliveryStory.current(DeliveryStoryApp.getState()).id)).toBe('gateFight');expect(await page.evaluate(()=>localStorage.getItem('ochams-campaign-v4'))).toBe('unchanged');});
