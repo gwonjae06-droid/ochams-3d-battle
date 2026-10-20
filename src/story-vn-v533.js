@@ -13,9 +13,9 @@ const THEMES=[null,
 export function speakerKind(who){if(Object.values(PARTY).some(p=>p.name===who))return 'party';if(BOSSES[who])return 'boss';if(NARRATORS.has(who))return 'narration';return 'other';}
 export function castFor(party,who){const left=(party||[]).filter(id=>PARTY[id]).map(id=>({id,name:PARTY[id].name,initial:[...PARTY[id].name][0],color:PARTY[id].color,active:PARTY[id].name===who})),right=BOSSES[who]?[{id:BOSSES[who].id,name:who,initial:[...who][0],color:BOSSES[who].color,active:true}]:[];return {left,right};}
 export function chapterTheme(ch){return {...(THEMES[ch]||THEMES[1])};}
-export function resolveLines(event,state){return event.lines.map(([who,text])=>({who,text:typeof text==='function'?text(state):text}));}
-export function createViewer(C,store){let s=null,idx=0,nonce=0,msg='',saved=true;
-const clone=x=>JSON.parse(JSON.stringify(x)),lines=()=>resolveLines(C.current(s),s);
+export function resolveLines(event,state,script){const src=(script&&script[event.id])||event.lines;return src.map(([who,text])=>({who,text:typeof text==='function'?text(state):text}));}
+export function createViewer(C,store,script){let s=null,idx=0,nonce=0,msg='',saved=true;
+const clone=x=>JSON.parse(JSON.stringify(x)),lines=()=>resolveLines(C.current(s),s,script);
 function persist(){try{saved=store.write(JSON.stringify(s))!==false;}catch{saved=false;}}
 return {
 get state(){return s?clone(s):null;},
