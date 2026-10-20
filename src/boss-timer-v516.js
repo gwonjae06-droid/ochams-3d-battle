@@ -5,7 +5,7 @@ import {installSlimeLook} from './slime-look-v529.js?v=5.29';
 import {installBossLooks} from './boss-look-v530.js?v=5.30';
 import {installAmbience} from './ambience-v531.js?v=5.31';
 import {installPostFx} from './postfx-v532.js?v=5.32';
-import {watchVersion} from './version.js?v=5.32';
+import {watchVersion} from './version.js?v=5.33';
 const url=new URL('./boss-cataclysm-v515.js?source=5.16',import.meta.url),res=await fetch(url,{cache:'no-store'});
 if(!res.ok)throw Error('보스 연출 HTTP '+res.status);
 let src=await res.text();
