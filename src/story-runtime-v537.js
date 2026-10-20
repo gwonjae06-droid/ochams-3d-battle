@@ -1,0 +1,19 @@
+import {partyScene as baseParty} from './party-scene.js?storyBase=5.37';
+import {createPark as basePark} from './park-combat.js?storyBase=5.37';
+import * as T from 'three';
+import {encounterFor,maskStoryParty} from './story-battle-contract-v536.mjs?v=5.36';
+import {makeCheckpointClone} from './checkpoint-clone-v536.mjs?v=5.36';
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+export async function bootStory(request){const post=(type,extra={})=>parent.postMessage({type,requestId:request.requestId,node:request.node,...extra},request.parentOrigin);
+try{if(!globalThis.__storyStorageIsolated)throw Error('스토리 전투 저장 격리가 필요합니다.');const spec=encounterFor(request.node,request.members);let api;
+for(let i=0;i<1000;i++){api=globalThis.__ochamsGame;if(api?.auditReady&&globalThis.__storyRigs?.park&&globalThis.__ochamsArena)break;await pause(20);}if(!api?.auditReady||!globalThis.__storyRigs?.park)throw Error('전투 엔진 초기화 실패');
+if(typeof api.navigate!=='function')throw Error('전투 이동 API가 없습니다.');api.navigate('boss',spec.bossId);const r=api.state();if(r.boss!==spec.bossId||r.dummy)throw Error('전투 모드가 일치하지 않습니다.');maskStoryParty(r,spec);
+const A=globalThis.__ochamsArena,actors=globalThis.__storyRigs,allowed=new Set(spec.members);let clone=null,dragon=[];
+if(spec.variant==='checkpoint-clone'){r.max=r.bhp=650;r.phase=2;r.index=0;r.damageScale=.35;r.intentAt=function(o=0){return ['slash','smash','slash','guard'][(this.index+o)%4];};r.roll();clone=makeCheckpointClone(T);clone.root.position.set(7.5,0,-.5);A.scene.add(clone.root);dragon=A.scene.children.filter(o=>o!==clone.root&&(o===A.dr||o.isMesh&&(o.geometry?.type==='TubeGeometry'&&o.geometry.attributes.position.count>1000||o.geometry?.type==='ConeGeometry'&&o.geometry.parameters.radius===.18&&o.geometry.parameters.height===.85)||o.isGroup&&o.children.some(c=>c.isMesh&&c.geometry?.type==='CylinderGeometry'&&c.geometry.parameters.radiusTop===.18&&c.geometry.parameters.height===1.35)));}
+const native=A.renderer.render.bind(A.renderer);A.renderer.render=function(scene,camera,...rest){const hidden=[];for(const [id,actor] of Object.entries(actors))if(!allowed.has(id))hidden.push(actor.hero);if(clone&&r.boss===1){hidden.push(...dragon);const f=A.presentationFrame;clone.setState(f?.mode==='boss'?'attack':r.bhp<=0?'disabled':'idle',f?.time||0);}const visible=hidden.map(o=>o.visible);hidden.forEach(o=>o.visible=false);try{return native(scene,camera,...rest);}finally{hidden.forEach((o,i)=>o.visible=visible[i]);}};
+const style=document.createElement('style');style.textContent=Object.entries({bae:0,choi:1,park:2}).filter(([id])=>!allowed.has(id)).map(([,i])=>'#card'+i+'{display:none!important}').join('');document.head.append(style);
+let done=false;const finish=outcome=>{if(done)return;done=true;try{const sound=document.getElementById('sound');if(sound?.textContent.includes('켜짐'))sound.click();}catch{}post('ochams-story-result',{outcome});};window.addEventListener('ochams-win',()=>finish('win'));window.addEventListener('ochams-lose',()=>finish('lose'));
+const boss=document.getElementById('bossname');new MutationObserver(()=>{if(boss.textContent!==spec.title)boss.textContent=spec.title;}).observe(boss,{childList:true});boss.textContent=spec.title;if(clone){const phase=document.getElementById('phase');const label=()=>{if(phase.textContent!=='검문 분신')phase.textContent='검문 분신';};new MutationObserver(label).observe(phase,{childList:true});label();}document.body.style.visibility='visible';post('ochams-story-ready');
+}catch(e){post('ochams-story-error',{message:e.message});}}
+export function partyScene(...args){const p=baseParty(...args);globalThis.__storyRigs??={};Object.assign(globalThis.__storyRigs,{bae:args[0],choi:p.choi});return p;}
+export function createPark(...args){const p=basePark(...args);globalThis.__storyRigs??={};globalThis.__storyRigs.park=p.actor;return p;}
