@@ -20,6 +20,13 @@ Respond to the user in Korean. Inspect the current main HEAD before editing.
 6. Distinguish tests actually run, tests only inspected, and checks unavailable in the environment. CI configuration is not evidence of CI success.
 7. Before any GitHub write, obtain confirmation for the exact target and complete contents. After writing, verify the resulting commit and changed files.
 
+## Versioning
+- The displayed game version is VERSION in src/version.js (major.minor). package.json version is major.minor.patch and must share the same major.minor; tests/version.test.mjs enforces this.
+- Every update that changes game behavior, visuals, sound or story must raise VERSION (for example 5.27 to 5.28) and the package.json version together. Documentation-only or test-only changes may keep the version.
+- New module files and import query strings use the same version (for example graphics-v527.js?v=5.27).
+- Commit messages use the form type(vX.Y): summary, for example feat(v5.28): improve slime material.
+- Every final report states the version, the commit SHA and which checks were run or not run.
+
 ## Release checklist
 - No uncaught browser errors on the tested routes.
 - Both settlement endings remain reachable, retry does not charge twice, and stale UI input does not advance state.

@@ -1,0 +1,9 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {VERSION,stampText,stampVersion,watchVersion} from '../src/version.js';
+test('version format matches package.json major.minor',()=>{assert.match(VERSION,/^\d+\.\d+$/);const pkg=JSON.parse(readFileSync(new URL('../package.json',import.meta.url),'utf8'));assert.equal(pkg.version.split('.').slice(0,2).join('.'),VERSION);});
+test('stampText replaces or appends a single version label',()=>{assert.equal(stampText('오챔스 · 파티 v5.17','5.27'),'오챔스 · 파티 v5.27');assert.equal(stampText('오챔스','5.27'),'오챔스 v5.27');assert.equal(stampText(stampText('오챔스','5.27'),'5.27'),'오챔스 v5.27');});
+function fakeDoc(title,headerText){const attrs={},node={nodeType:3,textContent:headerText},titleEl={};return {title,documentElement:{setAttribute:(k,v)=>{attrs[k]=v;}},attrs,node,titleEl,querySelector:s=>s==='header'?(headerText===null?null:{firstChild:node}):s==='title'?titleEl:null};}
+test('stampVersion updates title, header and build attribute idempotently',()=>{const d=fakeDoc('오챔스 · 속성/충전 v5.20','오챔스 · 파티 v5.17');assert.equal(stampVersion(d),true);assert.equal(d.title,'오챔스 · 속성/충전 v'+VERSION);assert.equal(d.node.textContent,'오챔스 · 파티 v'+VERSION);assert.equal(d.attrs['data-build'],VERSION);stampVersion(d);assert.equal(d.title,'오챔스 · 속성/충전 v'+VERSION);assert.equal(stampVersion(null),false);const none=fakeDoc('x',null);assert.equal(stampVersion(none),true);});
+test('watcher re-stamps a title that is overwritten later',()=>{const d=fakeDoc('a v1.0','h');let cb;class Obs{constructor(f){cb=f;}observe(){}}watchVersion(d,Obs);d.title='오챔스 · 속성/충전 v5.20';cb();assert.equal(d.title,'오챔스 · 속성/충전 v'+VERSION);assert.equal(watchVersion(null,Obs),null);assert.equal(watchVersion({...d,querySelector:()=>null},Obs),null);});
