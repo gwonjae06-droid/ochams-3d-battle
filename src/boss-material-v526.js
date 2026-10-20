@@ -9,12 +9,15 @@ if(boss===1)s=[tone('sine',1180,1100,.38,.1),tone('sine',1830,1700,.3,.06),tone(
 else if(boss===2)s=[tone('sine',280,85,.16,.22),noise('bandpass',650,.12,.16)].concat(p>.6?[tone('sine',480,900,.08,.08,.05)]:[]);
 else if(boss===3)s=[noise('bandpass',950,.09,.24),tone('sine',125,50,.2,.26),tone('triangle',3200,2600,.03,.06)];
 else return [];
-if(role==='attack')s.push(tone('sine',95,38,.32,.22));
+if(role==='hit'&&p>=.6)s.push(tone('sine',70,34,.22,.3));
+if(role==='attack'){s.push(tone('sine',95,38,.32,.22));s.push(noise('lowpass',220,.25,.3));}
 return s.map(x=>({...x,gain:x.gain*p}));}
 export function shieldPlan(power){const p=clamp(Number(power)||0,0,1);return p>0?[tone('sine',1400,1250,.35,.09*p),tone('sine',2100,2000,.25,.04*p)]:[];}
-export function createPlayer(){let ctx=null,out=null,buf=null;
-function ensure(){if(ctx)return true;const AC=globalThis.AudioContext||globalThis.webkitAudioContext;if(!AC)return false;ctx=new AC();out=ctx.createGain();out.gain.value=.5;const comp=ctx.createDynamicsCompressor();out.connect(comp);comp.connect(ctx.destination);buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.5),ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return true;}
-return specs=>{const st=globalThis.__ochamsSoundState;if(!specs?.length)return;if(st&&(st.enabled===false||!(st.fxVolume>0)))return;if(globalThis.document?.hidden||globalThis.__ochamsHomeActive)return;if(!ensure())return;if(ctx.state!=='running'){ctx.resume?.().catch?.(()=>{});return;}
+let shared=null;
+export function sharedAudio(){if(shared)return shared;let ctx=null,out=null,buf=null;
+shared={ensure(){if(ctx)return true;const AC=globalThis.AudioContext||globalThis.webkitAudioContext;if(!AC)return false;ctx=new AC();out=ctx.createGain();out.gain.value=.5;const comp=ctx.createDynamicsCompressor();out.connect(comp);comp.connect(ctx.destination);buf=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*.5),ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;return true;},get ctx(){return ctx;},get out(){return out;},get buf(){return buf;}};return shared;}
+export function createPlayer(audio=sharedAudio()){
+return specs=>{const st=globalThis.__ochamsSoundState;if(!specs?.length)return;if(st&&(st.enabled===false||!(st.fxVolume>0)))return;if(globalThis.document?.hidden||globalThis.__ochamsHomeActive)return;if(!audio.ensure())return;const ctx=audio.ctx,out=audio.out,buf=audio.buf;if(ctx.state!=='running'){ctx.resume?.().catch?.(()=>{});return;}
 const vol=st?.fxVolume??.75,t0=ctx.currentTime+.005;
 for(const s of specs){const at=t0+(s.delay||0),g=ctx.createGain(),peak=Math.max(.0002,s.gain*vol);g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(peak,at+.01);g.gain.exponentialRampToValueAtTime(.0001,at+s.dur);
 if(s.type==='tone'){const o=ctx.createOscillator();o.type=s.wave;o.frequency.setValueAtTime(s.from,at);o.frequency.exponentialRampToValueAtTime(Math.max(20,s.to),at+s.dur);o.connect(g);g.connect(out);o.start(at);o.stop(at+s.dur+.03);o.onended=()=>{o.disconnect();g.disconnect();};}
